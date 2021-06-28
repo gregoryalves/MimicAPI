@@ -1,8 +1,10 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using AutoMapper;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MimicAPI.DataBase;
 using MimicAPI.Helpers;
 using MimicAPI.Model;
+using MimicAPI.Model.DTO;
 using MimicAPI.Repositories.Contracts;
 using Newtonsoft.Json;
 using System;
@@ -16,11 +18,13 @@ namespace MimicAPI.Controller
     public class PalavrasController : ControllerBase
     {
         private readonly IPalavraRepository _repository;
+        private readonly IMapper _mapper;
 
         //Retorna a instancia do banco de dados
-        public PalavrasController(IPalavraRepository repository)
+        public PalavrasController(IPalavraRepository repository, IMapper mapper)
         {
             _repository = repository;
+            _mapper = mapper;
         }
 
         //WEB -- /api/palavras
@@ -48,7 +52,13 @@ namespace MimicAPI.Controller
             if (palavra == null)
                 return NotFound();
 
-            return new JsonResult(palavra);
+            PalavraDTO palavraDTO = _mapper.Map<Palavra, PalavraDTO>(palavra);
+            palavraDTO.Links = new List<LinkDTO>();
+            palavraDTO.Links.Add(
+                new LinkDTO("self", $"https://localhost:44342/api/palavras/{palavraDTO.Id}", "GET")
+                );
+
+            return new JsonResult(palavraDTO);
         }
 
         //WEB -- /api/palavras (POST: id, nome, ativo, pontuacao, datacriacao)

@@ -11,6 +11,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using AutoMapper;
+using MimicAPI.Helpers;
 
 namespace MimicAPI
 {
@@ -20,6 +22,16 @@ namespace MimicAPI
         // For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=398940
         public void ConfigureServices(IServiceCollection services)
         {
+            #region AutoMapper - Config
+            var config = new MapperConfiguration(cfg =>
+            {
+                cfg.AddProfile(new DTOMapperProfile());
+            });
+
+            IMapper mapper = config.CreateMapper();
+            services.AddSingleton(mapper);
+            #endregion
+
             services.AddDbContext<MimicContext>(options =>
             {
                 options.UseSqlite("Data Source=DataBase\\Mimic.db");
