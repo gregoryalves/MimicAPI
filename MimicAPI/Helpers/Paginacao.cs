@@ -9,7 +9,7 @@ namespace MimicAPI.Helpers
     {
         protected int NumeroPagina { get; set; }
         protected int RegistrosPorPagina { get; set; }
-        protected int TotalRegistros { get; set; }
+        protected int TotalRegistros { get; set; } 
         public int TotalPaginas { get; set; }
 
         public Paginacao(int? numeroPagina, int? registrosPorPagina, int? totalRegistros)

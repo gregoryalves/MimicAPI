@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using MimicAPI.DataBase;
 using MimicAPI.Helpers;
 using MimicAPI.Model;
+using MimicAPI.Repositories.Contracts;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -14,44 +15,26 @@ namespace MimicAPI.Controller
     [Route("api/Palavras")]
     public class PalavrasController : ControllerBase
     {
-        private readonly MimicContext _banco;
+        private readonly IPalavraRepository _repository;
 
         //Retorna a instancia do banco de dados
-        public PalavrasController(MimicContext banco)
+        public PalavrasController(IPalavraRepository repository)
         {
-            _banco = banco;
+            _repository = repository;
         }
 
         //WEB -- /api/palavras
         [Route("")]
         [HttpGet]
         public ActionResult BuscarTodas([FromQuery]PalavraUrlQuery query)
-        { 
-            var palavras = _banco.Palavras.AsQueryable();
+        {
+            var palavras = _repository.BuscarTodas(query);
 
-            if (query.Data.HasValue)
-                palavras = palavras.Where(x => x.DataCriacao > query.Data.Value || x.DataAtualizacao > query.Data.Value);
-            
-            if (query.NumeroPagina.HasValue)
-            {
-                var quantidadeTotalRegistros = palavras.Count();
-                var qntdPalavasPuladas = (query.NumeroPagina.Value - 1) * query.QntRegistrosPagina.Value;
-                
-                palavras = palavras.Skip(qntdPalavasPuladas).Take(query.QntRegistrosPagina.Value);
+            if (query.NumeroPagina > palavras.Paginacao.TotalPaginas)
+                return NotFound();
 
-                var paginacao = new Paginacao(query.NumeroPagina.Value,
-                                              query.QntRegistrosPagina.Value,
-                                              quantidadeTotalRegistros);
-                                
-                paginacao.CalcularTotalDePaginasNecessarias();
+            Response.Headers.Add("X-Pagination", JsonConvert.SerializeObject(palavras.Paginacao));
 
-                Response.Headers.Add("X-Pagination", JsonConvert.SerializeObject(paginacao));
-
-                if (query.NumeroPagina > paginacao.TotalPaginas)
-                    return NotFound();
-
-            }
-            
             return new JsonResult(palavras);
         }
 
@@ -60,7 +43,7 @@ namespace MimicAPI.Controller
         [HttpGet]
         public ActionResult Buscar(int id)
         {
-            var palavra = _banco.Palavras.Find(id);
+            var palavra = _repository.Buscar(id);
 
             if (palavra == null)
                 return NotFound();
@@ -73,10 +56,7 @@ namespace MimicAPI.Controller
         [HttpPost]
         public ActionResult Cadastrar([FromBody]Palavra palavra)
         {
-            palavra.DataCriacao = DateTime.Now;
-
-            _banco.Palavras.Add(palavra);
-            _banco.SaveChanges();
+            _repository.Cadastrar(palavra);
 
             return Created($"api/palavras/{palavra.Id}", palavra);
         }
@@ -86,16 +66,15 @@ namespace MimicAPI.Controller
         [HttpPut]
         public ActionResult Atualizar(int id, [FromBody]Palavra palavra)
         {
-            var obj = _banco.Palavras.AsNoTracking().FirstOrDefault(x => x.Id == id);
+            var palavraEncontrada = _repository.Buscar(id);
 
-            if (obj == null)
+            if (palavraEncontrada == null)
                 return NotFound();
 
             palavra.Id = id;
             palavra.DataAtualizacao = DateTime.Now;
 
-            _banco.Palavras.Update(palavra);
-            _banco.SaveChanges();
+            _repository.Atualizar(palavra);
 
             return Ok();
         }
@@ -105,15 +84,12 @@ namespace MimicAPI.Controller
         [HttpDelete]
         public ActionResult Deletar(int id)
         {
-            var palavraEncontrada = _banco.Palavras.Find(id);
+            var palavraEncontrada = _repository.Buscar(id);
 
             if (palavraEncontrada == null)
                 return NotFound();
 
-            if (palavraEncontrada != null)
-                _banco.Palavras.Remove(palavraEncontrada);
-
-            _banco.SaveChanges();
+            _repository.Deletar(id);
 
             return NoContent();
         }
